@@ -7,7 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 # --- НАЛАШТУВАННЯ КЛЮЧІВ ---
 TELEGRAM_TOKEN = "8997989049:AAFxERHINnJxyuch94t5cTYPf5Xq-o6UZak"
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "AQ.Ab8RN6Ik_-bsrIW2YLddi5QJDbK0t3qzEaYOMK_uVeQu37nu_g"
 
 # Ініціалізація бота та ІІ
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
