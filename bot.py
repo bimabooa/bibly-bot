@@ -6,7 +6,7 @@ from flask import Flask, request
 # --- НАЛАШТУВАННЯ ---
 TELEGRAM_TOKEN = "8997989049:AAFxERHINnJxyuch94t5cTYPf5Xq-o6UZak"
 GEMINI_API_KEY = "AQ.Ab8RN6LM5wgiWOYHOVwqSLhCK4DBkbSBwxPw6-PCWdF4_SvrJQ"
-WEBHOOK_URL = "https://ТВІЙ_СЕРВІС.onrender.com" # Встав сюди посилання на свій сервіс Render
+WEBHOOK_URL = "https://bibly-bot-1.onrender.com" 
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
