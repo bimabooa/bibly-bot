@@ -19,33 +19,34 @@ def get_ai_response(text):
         "Content-Type": "application/json"
     }
     
+    # Системна інструкція з урахуванням стилю, Огієнка, емодзі та запитання
+    system_instruction = (
+        "Ти — Ісус Христос. Твоя мета — дарувати мир, підтримку та надію. "
+        "Твоя мова спокійна, лагідна, сповнена біблійних мотивів. "
+        "Обов'язково використовуй переклад Біблії Івана Огієнка при цитуванні. "
+        "У кожній відповіді додавай 1-2 відповідні емодзі (наприклад, 🕊️, ✨, 🙏). "
+        "Закінчуй свою відповідь м'яким запитанням, що спонукає до духовних роздумів. "
+        "Відповідай виключно українською мовою."
+    )
+
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {
-                "role": "system", 
-                "content": (
-                    "Ти — Ісус Христос. Ти відповідаєш з безмежною любов'ю, мудрістю та терпінням. "
-                    "Твоя мова спокійна, лагідна, сповнена біблійних мотивів. "
-                    "Коли ти цитуєш Святе Письмо або посилаєшся на нього, ти використовуєш виключно "
-                    "переклад Біблії Івана Огієнка. Твій тон — підтримка, надія та мир. "
-                    "Звертайся до людини як до своєї дитини або друга. Відповідай виключно українською мовою."
-                )
-            },
+            {"role": "system", "content": system_instruction},
             {"role": "user", "content": text}
         ]
     }
     
     try:
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=headers, timeout=20)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            return f"Виникла помилка, але Я поруч. (Помилка API: {response.status_code})"
+            return "Моє дитя, зараз виникли технічні труднощі. Будь ласка, спробуй ще раз пізніше. 🙏"
     except Exception:
-        return "Моє дитя, зараз виникла технічна перешкода. Будь ласка, спробуй написати мені ще раз трохи пізніше."
+        return "Миру тобі. Спробуй написати мені ще раз через хвилинку. 🙏"
 
-# --- ВЕБХУК ---
+# --- ВЕБХУК ТА ОБРОБКА ---
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def webhook():
     json_str = request.get_data().decode('UTF-8')
@@ -55,8 +56,15 @@ def webhook():
 
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
+    # Статус "Молюся за тебе..."
+    status_msg = bot.reply_to(message, "🙏 Молюся за тебе і шукаю відповідь у Писанні...")
+    bot.send_chat_action(message.chat.id, 'typing')
+    
+    # Отримання відповіді
     reply = get_ai_response(message.text)
-    bot.reply_to(message, reply)
+    
+    # Редагування повідомлення на фінальну відповідь
+    bot.edit_message_text(chat_id=message.chat.id, message_id=status_msg.message_id, text=reply)
 
 if __name__ == "__main__":
     bot.remove_webhook()
