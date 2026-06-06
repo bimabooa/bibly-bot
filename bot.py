@@ -17,6 +17,8 @@ def get_ai_response(text):
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
+    }
+    
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
@@ -28,13 +30,14 @@ def get_ai_response(text):
         ]
     }
     
-    response = requests.post(url, json=data, headers=headers)
-    
-    if response.status_code == 200:
-        return response.json()['choices'][0]['message']['content']
-    else:
-        # Повертаємо текст помилки, щоб побачити його в Telegram
-        return f"Помилка {response.status_code}: {response.text}"
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            return f"Помилка {response.status_code}: {response.text}"
+    except Exception as e:
+        return f"Помилка підключення: {str(e)}"
 
 # --- ВЕБХУК ---
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
