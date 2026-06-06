@@ -1,20 +1,37 @@
 import telebot
-import google.generativeai as genai
+import requests
 import os
 from flask import Flask, request
 
 # --- НАЛАШТУВАННЯ ---
 TELEGRAM_TOKEN = "8997989049:AAFxERHINnJxyuch94t5cTYPf5Xq-o6UZak"
-GEMINI_API_KEY = "AQ.Ab8RN6LM5wgiWOYHOVwqSLhCK4DBkbSBwxPw6-PCWdF4_SvrJQ"
+GROQ_API_KEY = "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"
 WEBHOOK_URL = "https://bibly-bot-1.onrender.com"
 
-# Ініціалізація
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# --- ВЕБХУК ДЛЯ TELEGRAM ---
+# --- ФУНКЦІЯ ЗАПИТУ ДО GROQ ---
+def get_ai_response(text):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "llama3-8b-8192",
+        "messages": [{"role": "user", "content": f"Ти — духовний наставник. Відповідай українською мовою: {text}"}]
+    }
+    
+    response = requests.post(url, json=data, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()['choices'][0]['message']['content']
+    else:
+        # Повертаємо текст помилки, щоб побачити його в Telegram
+        return f"Помилка {response.status_code}: {response.text}"
+
+# --- ВЕБХУК ---
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def webhook():
     json_str = request.get_data().decode('UTF-8')
@@ -22,31 +39,13 @@ def webhook():
     bot.process_new_updates([update])
     return "OK", 200
 
-# --- ЛОГІКА БОТА ---
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
-    print(f"--- Отримано повідомлення: {message.text} ---")
-    try:
-        # Запит до Gemini
-        prompt = f"Ти — духовний наставник. Відповідай з любов'ю: {message.text}"
-        response = model.generate_content(prompt)
-        
-        # Перевірка, чи прийшла відповідь
-        if response.text:
-            print(f"--- Відповідь Gemini: {response.text[:50]}... ---")
-            bot.reply_to(message, response.text)
-        else:
-            print("--- Помилка: Gemini повернув порожню відповідь ---")
-            bot.reply_to(message, "Я отримав твоє питання, але не зміг сформулювати відповідь.")
-            
-    except Exception as e:
-        print(f"--- КРИТИЧНА ПОМИЛКА: {str(e)} ---")
-        bot.reply_to(message, f"Технічна помилка: {str(e)}")
+    reply = get_ai_response(message.text)
+    bot.reply_to(message, reply)
 
-# --- ЗАПУСК ---
 if __name__ == "__main__":
     bot.remove_webhook()
-    webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}"
-    bot.set_webhook(url=webhook_url)
-    print(f"Бот запущено! Вебхук встановлено на: {webhook_url}")
+    bot.set_webhook(url=f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    
