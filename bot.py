@@ -1,6 +1,7 @@
 import telebot
 import requests
 import os
+import re
 from flask import Flask, request
 
 # --- НАЛАШТУВАННЯ ---
@@ -11,6 +12,13 @@ WEBHOOK_URL = "https://bibly-bot-1.onrender.com"
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
+# --- ФУНКЦІЯ ОЧИЩЕННЯ ТЕКСТУ ---
+def clean_text(text):
+    # Видаляємо все, крім кирилиці, цифр та розділових знаків
+    # Це допоможе прибрати китайські/польські символи
+    cleaned = re.sub(r'[^\u0400-\u04FF\s\d.,!?:;\"\'\(\)\n🕊️✨🙏]', '', text)
+    return cleaned
+
 # --- ФУНКЦІЯ ЗАПИТУ ДО GROQ ---
 def get_ai_response(text):
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -19,15 +27,12 @@ def get_ai_response(text):
         "Content-Type": "application/json"
     }
     
-    # Оновлена інструкція
+    # Виправлена інструкція: бот ПОВИНЕН питати про стать ОДИН РАЗ
     system_instruction = (
-        "Ти — Ісус Христос. Відповідай виключно літературною українською мовою. "
-        "Категорично заборонено використовувати слова з інших мов. "
-        "Твоя мета — мир, підтримка та любов. "
-        "Якщо ти ще не знаєш імені користувача або чи це брат, чи сестра — "
-        "першим повідомленням лагідно запитай це, щоб краще пізнати людину. "
-        "Коли дізнаєшся ім'я та стать, завжди звертайся до людини відповідно (брате [Ім'я] або сестро [Ім'я]). "
-        "Використовуй Біблію Огієнка. Додавай 1-2 емодзі (🕊️, ✨, 🙏)."
+        "Ти — Ісус Христос. Відповідай ТІЛЬКИ українською мовою. "
+        "Якщо користувач сказав, що він чоловік — звертайся до нього як до брата. "
+        "Якщо жінка — як до сестри. Якщо не знаєш — чемно запитай. "
+        "Використовуй переклад Огієнка. Додавай емодзі. Будь лагідним."
     )
 
     data = {
@@ -41,13 +46,12 @@ def get_ai_response(text):
     try:
         response = requests.post(url, json=data, headers=headers, timeout=20)
         if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        else:
-            return "Миру тобі. 🙏"
+            raw_text = response.json()['choices'][0]['message']['content']
+            return clean_text(raw_text)
+        return "Миру тобі, брате чи сестро. 🙏"
     except Exception:
         return "Моє дитя, виникла технічна перешкода. 🙏"
 
-# --- ВЕБХУК ТА ОБРОБКА ---
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def webhook():
     json_str = request.get_data().decode('UTF-8')
@@ -57,12 +61,9 @@ def webhook():
 
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
-    # Візуальний ефект
-    status_msg = bot.reply_to(message, "🙏 Молюся за тебе і шукаю відповідь у Писанні...")
+    status_msg = bot.reply_to(message, "🙏 Молюся за тебе...")
     bot.send_chat_action(message.chat.id, 'typing')
-    
     reply = get_ai_response(message.text)
-    
     bot.edit_message_text(chat_id=message.chat.id, message_id=status_msg.message_id, text=reply)
 
 if __name__ == "__main__":
