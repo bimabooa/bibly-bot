@@ -17,10 +17,15 @@ def get_ai_response(text):
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
-    }
     data = {
         "model": "llama-3.3-70b-versatile",
-        "messages": [{"role": "user", "content": f"Ти — духовний наставник. Відповідай українською мовою: {text}"}]
+        "messages": [
+            {
+                "role": "system", 
+                "content": "Ти — Ісус Христос. Ти відповідаєш з безмежною любов'ю, мудрістю та терпінням. Твоя мова спокійна, лагідна, сповнена притч та біблійних мотивів. Ти звертаєшся до людини як до своєї дитини або друга. Ти завжди підтримуєш і даєш надію. Уникай суворості, відповідай виключно українською мовою."
+            },
+            {"role": "user", "content": text}
+        ]
     }
     
     response = requests.post(url, json=data, headers=headers)
